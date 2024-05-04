@@ -8,6 +8,7 @@ import (
 
 	"syscall"
 
+	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
 
@@ -34,6 +35,52 @@ func main() {
 	err = pubsub.PublishJSON(ch, routing.ExchangePerilDirect, routing.PauseKey, data)
 	if err != nil {
 		log.Fatalf(err.Error())
+	}
+
+	var simpleQueueType pubsub.SimpleQueueType = pubsub.Durable
+	pubsub.DeclareAndBind(connect, routing.ExchangePerilTopic, routing.GameLogSlug, routing.GameLogSlug+"1", simpleQueueType.EnumIndex())
+
+	gamelogic.PrintServerHelp()
+	for {
+		data := routing.PlayingState{
+			IsPaused: true,
+		}
+		words := gamelogic.GetInput()
+		if len(words) == 0 {
+			continue
+		}
+		if words[0] == "pause" {
+			log.Println("sending the pause message")
+			data = routing.PlayingState{
+				IsPaused: true,
+			}
+
+			err = pubsub.PublishJSON(ch, routing.ExchangePerilDirect, routing.PauseKey, data)
+			if err != nil {
+				log.Fatalf(err.Error())
+			}
+			continue
+		}
+
+		if words[0] == "resume" {
+			log.Println("sending the resume message")
+			data = routing.PlayingState{
+				IsPaused: false,
+			}
+
+			err = pubsub.PublishJSON(ch, routing.ExchangePerilDirect, routing.PauseKey, data)
+			if err != nil {
+				log.Fatalf(err.Error())
+			}
+			continue
+		}
+
+		if words[0] == "quit" {
+			log.Println("Exiting ")
+			break
+		}
+		log.Println(" I do not understand the command")
+
 	}
 
 	done := make(chan os.Signal, 1)

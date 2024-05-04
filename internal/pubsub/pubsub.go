@@ -3,8 +3,9 @@ package pubsub
 import (
 	"context"
 	"encoding/json"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"time"
+
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 func PublishJSON[T any](ch *amqp.Channel, exchange, key string, val T) error {
@@ -25,4 +26,32 @@ func PublishJSON[T any](ch *amqp.Channel, exchange, key string, val T) error {
 		return err
 	}
 	return nil
+}
+
+func DeclareAndBind(
+	conn *amqp.Connection,
+	exchange,
+	queueName,
+	key string,
+	simpleQueueType int, // an enum to represent "durable" or "transient"
+) (*amqp.Channel, amqp.Queue, error) {
+	ch, _ := conn.Channel()
+	durable := false
+
+	if simpleQueueType == 1 {
+		durable = true
+	}
+
+	autoDelete := false
+	exclusive := false
+	if simpleQueueType == 2 {
+		autoDelete = true
+		exclusive = true
+	}
+	noWait := false
+
+	queue, _ := ch.QueueDeclare(queueName, durable, autoDelete, exclusive, noWait, nil)
+	err := ch.QueueBind(queue.Name, key, exchange, noWait, nil)
+	return ch, queue, err
+
 }
